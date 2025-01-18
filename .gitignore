@@ -1,2 +1,3 @@
 .env
-.docker-ignore
+/indexer/target/
+/indexer/Cargo.lock
