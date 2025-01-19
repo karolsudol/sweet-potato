@@ -1,5 +1,3 @@
-CREATE DATABASE IF NOT EXISTS raw;
-
 CREATE TABLE IF NOT EXISTS raw.blocks
 (
     `timestamp` DateTime,
@@ -25,4 +23,4 @@ CREATE TABLE IF NOT EXISTS raw.blocks
 )
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(timestamp)
-ORDER BY timestamp; 
+ORDER BY timestamp 

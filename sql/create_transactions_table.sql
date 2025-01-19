@@ -1,5 +1,3 @@
-CREATE DATABASE IF NOT EXISTS raw;
-
 CREATE TABLE IF NOT EXISTS raw.transactions
 (
     `blockTimestamp` DateTime,
