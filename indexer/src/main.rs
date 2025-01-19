@@ -11,29 +11,43 @@ use tracing_subscriber::{FmtSubscriber, EnvFilter};
 struct Block {
     timestamp: DateTime<Utc>,
     number: i64,
+    #[serde(rename = "baseFeePerGas")]
     base_fee_per_gas: Option<i128>,
     difficulty: Option<i128>,
+    #[serde(rename = "extraData")]
     extra_data: Option<String>,
+    #[serde(rename = "gasLimit")]
     gas_limit: Option<i128>,
+    #[serde(rename = "gasUsed")]
     gas_used: Option<i128>,
     hash: String,
+    #[serde(rename = "logsBloom")]
     logs_bloom: Option<String>,
     miner: Option<String>,
+    #[serde(rename = "mixHash")]
     mix_hash: Option<String>,
     nonce: Option<String>,
+    #[serde(rename = "parentHash")]
     parent_hash: Option<String>,
+    #[serde(rename = "receiptsRoot")]
     receipts_root: Option<String>,
+    #[serde(rename = "sha3Uncles")]
     sha3_uncles: Option<String>,
     size: Option<i128>,
+    #[serde(rename = "stateRoot")]
     state_root: Option<String>,
+    #[serde(rename = "totalDifficulty")]
     total_difficulty: Option<i128>,
+    #[serde(rename = "transactionsRoot")]
     transactions_root: Option<String>,
     uncles: Vec<Option<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Row)]
 struct Receipt {
+    #[serde(rename = "blockNumber")]
     block_number: i64,
+    #[serde(rename = "blockTimestamp")]
     block_timestamp: DateTime<Utc>,
     #[serde(rename = "blockHash")]
     block_hash: String,
@@ -359,9 +373,13 @@ async fn convert_receipts_hex_to_decimal(receipts: Value, block_number: u64) -> 
 
     for receipt in receipts_array.iter_mut() {
         if let Some(obj) = receipt.as_object_mut() {
-            // Add block_number and block_timestamp fields
-            obj.insert("block_number".to_string(), json!(block_number as i64));
-            obj.insert("block_timestamp".to_string(), timestamp.clone());
+            // Remove the old fields first
+            obj.remove("block_number");
+            obj.remove("block_timestamp");
+            
+            // Add block_number and blockTimestamp fields with correct names
+            obj.insert("blockNumber".to_string(), json!(block_number as i64));
+            obj.insert("blockTimestamp".to_string(), timestamp.clone());
 
             // Convert numeric fields from hex to decimal
             if let Some(cumulative_gas) = obj.get_mut("cumulativeGasUsed") {
@@ -396,9 +414,42 @@ async fn convert_receipts_hex_to_decimal(receipts: Value, block_number: u64) -> 
                 }
             }
 
-            // Rename type field to match struct
-            if let Some(type_val) = obj.remove("type") {
-                obj.insert("type_field".to_string(), type_val);
+            // Convert log indices from hex to decimal
+            if let Some(logs) = obj.get_mut("logs").and_then(Value::as_array_mut) {
+                for log in logs {
+                    if let Some(log_obj) = log.as_object_mut() {
+                        if let Some(log_index) = log_obj.get_mut("logIndex") {
+                            if let Some(hex) = log_index.as_str() {
+                                if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
+                                    *log_index = json!(val.to_string());
+                                }
+                            }
+                        }
+                        if let Some(block_number) = log_obj.get_mut("blockNumber") {
+                            if let Some(hex) = block_number.as_str() {
+                                if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
+                                    *block_number = json!(val);
+                                }
+                            }
+                        }
+                        if let Some(tx_index) = log_obj.get_mut("transactionIndex") {
+                            if let Some(hex) = tx_index.as_str() {
+                                if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
+                                    *tx_index = json!(val.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Handle the type field - make sure it's a plain string without 0x prefix
+            if let Some(type_val) = obj.get_mut("type") {
+                if let Some(hex) = type_val.as_str() {
+                    if hex.starts_with("0x") {
+                        *type_val = json!(hex[2..].to_string());
+                    }
+                }
             }
         }
     }
