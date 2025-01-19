@@ -2,13 +2,12 @@ version: '3.8'
 
 services:
   clickhouse:
-    build: .
+    image: clickhouse/clickhouse-server:latest
     ports:
       - "8123:8123"   # HTTP interface
       - "9000:9000"   # Native interface
     volumes:
       - ./db/user_files:/var/lib/clickhouse  # Data persistence
-      - ./sql:/docker-entrypoint-initdb.d    # Startup scripts
     environment:
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=password

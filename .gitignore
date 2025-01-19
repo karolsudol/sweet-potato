@@ -1,3 +1,4 @@
 .env
 /indexer/target/
 /indexer/Cargo.lock
+db/user_files
