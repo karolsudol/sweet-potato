@@ -70,8 +70,15 @@ struct Indexer {
 
 impl Indexer {
     async fn new(clickhouse_url: &str, print_output: bool) -> Result<Self> {
+        let username = env::var("CLICKHOUSE_USER")
+            .unwrap_or_else(|_| "default".to_string());
+        let password = env::var("CLICKHOUSE_PASSWORD")
+            .unwrap_or_else(|_| "password".to_string());
+
         let client = Client::default()
             .with_url(clickhouse_url)
+            .with_user(username)
+            .with_password(password)
             .with_database("raw");
         
         // Initialize database and tables
@@ -189,6 +196,9 @@ async fn get_block_receipts(number: u64) -> Result<Value> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load .env from project root
+    dotenv::from_path("../.env").ok();
+    
     let start = env::var("START")
         .unwrap_or_else(|_| "1".to_string())
         .parse::<u64>()?;

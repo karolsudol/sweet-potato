@@ -36,14 +36,14 @@ The indexer supports the following environment variables:
 ### Run the Indexer
 ```bash
 # Basic usage (will process 1 block starting from block 1)
-cargo run
+cd indexer && cargo run
 
 # Process specific block range
-START=1000 COUNT=100 cargo run
+cd indexer && START=1000 COUNT=100 cargo run
 
 # Process blocks with detailed output
-START=1000 COUNT=10 PRINT_OUTPUT=true cargo run
+cd indexer && START=1000 COUNT=10 PRINT_OUTPUT=true cargo run
 
 # Use custom database URL
-CLICKHOUSE_URL="http://custom-host:8123" cargo run
+cd indexer && CLICKHOUSE_URL="http://custom-host:8123" cargo run
 ```

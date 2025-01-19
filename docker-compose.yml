@@ -9,6 +9,6 @@ services:
     volumes:
       - ./db/user_files:/var/lib/clickhouse  # Data persistence
     environment:
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=password
-      - CLICKHOUSE_DB=raw 
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB} 
