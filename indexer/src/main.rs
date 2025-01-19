@@ -64,7 +64,7 @@ struct Receipt {
     #[serde(rename = "logsBloom")]
     logs_bloom: String,
     status: String,
-    to: String,
+    to: Option<String>,
     #[serde(rename = "transactionHash")]
     transaction_hash: String,
     #[serde(rename = "transactionIndex")]
@@ -76,13 +76,18 @@ struct Receipt {
 #[derive(Debug, Serialize, Deserialize)]
 struct Log {
     address: String,
+    #[serde(rename = "blockHash")]
     block_hash: String,
+    #[serde(rename = "blockNumber")]
     block_number: i64,
     data: String,
+    #[serde(rename = "logIndex")]
     log_index: String,
     removed: bool,
     topics: Vec<String>,
+    #[serde(rename = "transactionHash")]
     transaction_hash: String,
+    #[serde(rename = "transactionIndex")]
     transaction_index: String,
 }
 
@@ -260,6 +265,10 @@ async fn get_block(number: u64) -> Result<Value> {
         .await?;
 
     let data: Value = response.json().await?;
+    
+    // Add debug logging for raw response
+    info!("Raw block response: {}", serde_json::to_string_pretty(&data).unwrap());
+    
     match data.get("result") {
         Some(result) => Ok(result.clone()),
         None => Err(anyhow::anyhow!("No result field in response"))
@@ -282,6 +291,10 @@ async fn get_block_receipts(number: u64) -> Result<Value> {
         .await?;
 
     let data: Value = response.json().await?;
+    
+    // Add debug logging for raw response
+    info!("Raw receipts response: {}", serde_json::to_string_pretty(&data).unwrap());
+    
     match data.get("result") {
         Some(result) => Ok(result.clone()),
         None => Err(anyhow::anyhow!("No result field in response"))
