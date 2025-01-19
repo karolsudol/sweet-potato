@@ -74,6 +74,19 @@ impl Indexer {
             .with_url(clickhouse_url)
             .with_database("raw");
         
+        // Initialize database and tables
+        let init_queries = [
+            include_str!("../../sql/create_blocks_table.sql"), 
+            include_str!("../../sql/create_receipts_table.sql"),
+            include_str!("../../sql/create_transactions_table.sql"),
+        ];
+
+        for query in init_queries {
+            client.query(query).execute().await?;
+        }
+
+        println!("Database and tables initialized");
+        
         Ok(Self {
             client,
             print_output,
@@ -98,6 +111,7 @@ impl Indexer {
                     
                     let block: Block = serde_json::from_value(block_data)?;
                     block_inserter.write(&block).await?;
+                    println!("Block {} inserted into database", block_number);
                 },
                 Err(e) => {
                     eprintln!("Error fetching block {}: {}", block_number, e);
@@ -114,6 +128,7 @@ impl Indexer {
                 for receipt in receipts {
                     receipt_inserter.write(&receipt).await?;
                 }
+                println!("Receipts for block {} inserted into database", block_number);
             }
         }
 
