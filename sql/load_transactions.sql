@@ -1,34 +1,3 @@
-CREATE DATABASE IF NOT EXISTS raw;
-
-CREATE TABLE raw.transactions
-(
-  `blockTimestamp` DateTime,
-  `blockHash` Nullable(String),
-  `blockNumber` Int64,
-  `from` String,
-  `gas` Int256,
-  `gasPrice` Int256,
-  `hash` String,
-  `input` String,
-  `nonce` String,
-  `to` String,
-  `transactionIndex` Int64,
-  `value` Nullable(String),
-  `type` Nullable(String),
-  `chainId` Nullable(String),
-  `v` Nullable(String),
-  `r` Nullable(String),
-  `s` Nullable(String),
-  `maxFeePerGas` Int256,
-  `maxPriorityFeePerGas` Nullable(Int256),
-  `accessList` Array(Nullable(String)),
-  `yParity` Nullable(String)
-)
-ENGINE = MergeTree
-PARTITION BY toYYYYMM(blockTimestamp)
-ORDER BY blockTimestamp;
-
-
 insert into raw.transactions
 select
   parseDateTimeBestEffort(blockTimestamp) as blockTimestamp,
