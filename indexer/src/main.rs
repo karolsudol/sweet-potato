@@ -159,8 +159,31 @@ impl Indexer {
                         info!(block_number, "Retrieved block receipts");
                     }
                     
-                    let receipts_data = convert_receipts_hex_to_decimal(receipts_data, block_number).await?;
-                    let receipts: Vec<Receipt> = serde_json::from_value(receipts_data)?;
+                    let receipts_data = match convert_receipts_hex_to_decimal(receipts_data, block_number).await {
+                        Ok(data) => data,
+                        Err(e) => {
+                            error!(
+                                block_number,
+                                error = %e,
+                                "Failed to convert receipts hex to decimal"
+                            );
+                            continue;
+                        }
+                    };
+
+                    let receipts: Vec<Receipt> = match serde_json::from_value(receipts_data.clone()) {
+                        Ok(r) => r,
+                        Err(e) => {
+                            error!(
+                                block_number,
+                                error = %e,
+                                raw_data = ?receipts_data,
+                                "Failed to deserialize receipts data"
+                            );
+                            continue;
+                        }
+                    };
+
                     for receipt in receipts {
                         receipt_inserter.write(&receipt).await?;
                     }
