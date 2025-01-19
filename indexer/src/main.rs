@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{env, time::Duration};
 
-const RPC_URL: &str = "https://rpc.sepolia.linea.build";
-
 #[derive(Debug, Serialize, Deserialize, Row)]
 struct Block {
     timestamp: DateTime<Utc>,
@@ -167,12 +165,17 @@ impl Indexer {
     }
 }
 
+fn get_rpc_url() -> String {
+    env::var("RPC_URL")
+        .unwrap_or_else(|_| "https://rpc.sepolia.linea.build".to_string())
+}
+
 async fn get_block(number: u64) -> Result<Value> {
     let client = reqwest::Client::new();
     let hex_number = format!("0x{:x}", number);
     
     let response = client
-        .post(RPC_URL)
+        .post(&get_rpc_url())
         .json(&json!({
             "jsonrpc": "2.0",
             "id": 1,
@@ -194,7 +197,7 @@ async fn get_block_receipts(number: u64) -> Result<Value> {
     let hex_number = format!("0x{:x}", number);
     
     let response = client
-        .post(RPC_URL)
+        .post(&get_rpc_url())
         .json(&json!({
             "jsonrpc": "2.0",
             "id": 1,
