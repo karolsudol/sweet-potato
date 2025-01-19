@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS raw.receipts
     `blockNumber` Int64,
     `blockTimestamp` DateTime,
     `blockHash` String,
-    `contractAddress` String,
+    `contractAddress` Nullable(String),
     `cumulativeGasUsed` Int256,
     `effectiveGasPrice` Int256,
     `from` String,

@@ -9,10 +9,10 @@ CREATE TABLE IF NOT EXISTS raw.transactions
     `hash` String,
     `input` String,
     `nonce` String,
-    `to` String,
+    `to` Nullable(String),
     `transactionIndex` Int64,
     `value` Int256,
-    `type` Nullable(String),
+    `type` String,
     `v` String,
     `r` String,
     `s` String,
@@ -21,4 +21,4 @@ CREATE TABLE IF NOT EXISTS raw.transactions
 )
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(blockTimestamp)
-ORDER BY blockTimestamp; 
+ORDER BY blockTimestamp;

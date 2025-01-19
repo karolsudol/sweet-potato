@@ -3,7 +3,9 @@ use chrono::{DateTime, Utc};
 use clickhouse::{Client, Row};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{env, time::Duration};
+use std::{env, time::{Duration, Instant}};
+use tracing::{info, error, Level};
+use tracing_subscriber::{FmtSubscriber, EnvFilter};
 
 #[derive(Debug, Serialize, Deserialize, Row)]
 struct Block {
@@ -33,19 +35,28 @@ struct Block {
 struct Receipt {
     block_number: i64,
     block_timestamp: DateTime<Utc>,
+    #[serde(rename = "blockHash")]
     block_hash: String,
-    contract_address: String,
+    #[serde(rename = "contractAddress")]
+    contract_address: Option<String>,
+    #[serde(rename = "cumulativeGasUsed")]
     cumulative_gas_used: i128,
+    #[serde(rename = "effectiveGasPrice")]
     effective_gas_price: i128,
     from: String,
+    #[serde(rename = "gasUsed")]
     gas_used: i128,
     logs: Vec<Log>,
+    #[serde(rename = "logsBloom")]
     logs_bloom: String,
     status: String,
     to: String,
+    #[serde(rename = "transactionHash")]
     transaction_hash: String,
+    #[serde(rename = "transactionIndex")]
     transaction_index: i64,
-    type_field: String,
+    #[serde(rename = "type")]
+    type_: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -113,36 +124,59 @@ impl Indexer {
             .with_timeouts(Some(Duration::from_secs(5)), Some(Duration::from_secs(20)));
 
         for block_number in start..start + count {
-            println!("\nProcessing block {}", block_number);
+            let block_time = Instant::now();
+            info!(block_number, "Processing block");
             
             match get_block(block_number).await {
                 Ok(block_data) => {
                     if self.print_output {
-                        println!("Block data: {}", serde_json::to_string_pretty(&block_data)?);
+                        info!(block_number, "Retrieved block data");
                     }
                     
+                    let block_data = convert_block_hex_to_decimal(block_data);
                     let block: Block = serde_json::from_value(block_data)?;
-                    // Use load_blocks.sql query template
                     block_inserter.write(&block).await?;
-                    println!("Block {} inserted into database", block_number);
+                    info!(
+                        block_number,
+                        elapsed_ms = block_time.elapsed().as_millis(),
+                        "Block inserted into database"
+                    );
                 },
                 Err(e) => {
-                    eprintln!("Error fetching block {}: {}", block_number, e);
+                    error!(
+                        block_number,
+                        error = %e,
+                        "Failed to fetch block"
+                    );
                     continue;
                 }
             };
 
-            if let Ok(receipts_data) = get_block_receipts(block_number).await {
-                if self.print_output {
-                    println!("Block receipts: {}", serde_json::to_string_pretty(&receipts_data)?);
+            let receipt_time = Instant::now();
+            match get_block_receipts(block_number).await {
+                Ok(receipts_data) => {
+                    if self.print_output {
+                        info!(block_number, "Retrieved block receipts");
+                    }
+                    
+                    let receipts_data = convert_receipts_hex_to_decimal(receipts_data, block_number).await?;
+                    let receipts: Vec<Receipt> = serde_json::from_value(receipts_data)?;
+                    for receipt in receipts {
+                        receipt_inserter.write(&receipt).await?;
+                    }
+                    info!(
+                        block_number,
+                        elapsed_ms = receipt_time.elapsed().as_millis(),
+                        "Receipts inserted into database"
+                    );
                 }
-                
-                let receipts: Vec<Receipt> = serde_json::from_value(receipts_data)?;
-                // Use load_receipts.sql query template
-                for receipt in receipts {
-                    receipt_inserter.write(&receipt).await?;
+                Err(e) => {
+                    error!(
+                        block_number,
+                        error = %e,
+                        "Failed to fetch block receipts"
+                    );
                 }
-                println!("Receipts for block {} inserted into database", block_number);
             }
         }
 
@@ -150,8 +184,11 @@ impl Indexer {
         let block_stats = block_inserter.end().await?;
         let receipt_stats = receipt_inserter.end().await?;
 
-        println!("Blocks inserted: {} entries", block_stats.entries);
-        println!("Receipts inserted: {} entries", receipt_stats.entries);
+        info!(
+            blocks_inserted = block_stats.entries,
+            receipts_inserted = receipt_stats.entries,
+            "Insertion completed"
+        );
 
         Ok(())
     }
@@ -214,10 +251,159 @@ async fn get_block_receipts(number: u64) -> Result<Value> {
     }
 }
 
+// Add this new function to convert hex values to decimals
+fn convert_block_hex_to_decimal(mut block: Value) -> Value {
+    if let Some(obj) = block.as_object_mut() {
+        // Convert numeric fields from hex to decimal
+        if let Some(difficulty) = obj.get_mut("difficulty") {
+            if let Some(hex) = difficulty.as_str() {
+                if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                    *difficulty = json!(val);
+                }
+            }
+        }
+        
+        if let Some(base_fee) = obj.get_mut("baseFeePerGas") {
+            if let Some(hex) = base_fee.as_str() {
+                if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                    *base_fee = json!(val);
+                }
+            }
+        }
+
+        if let Some(gas_limit) = obj.get_mut("gasLimit") {
+            if let Some(hex) = gas_limit.as_str() {
+                if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                    *gas_limit = json!(val);
+                }
+            }
+        }
+
+        if let Some(gas_used) = obj.get_mut("gasUsed") {
+            if let Some(hex) = gas_used.as_str() {
+                if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                    *gas_used = json!(val);
+                }
+            }
+        }
+
+        if let Some(number) = obj.get_mut("number") {
+            if let Some(hex) = number.as_str() {
+                if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
+                    *number = json!(val);
+                }
+            }
+        }
+
+        if let Some(size) = obj.get_mut("size") {
+            if let Some(hex) = size.as_str() {
+                if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                    *size = json!(val);
+                }
+            }
+        }
+
+        if let Some(total_difficulty) = obj.get_mut("totalDifficulty") {
+            if let Some(hex) = total_difficulty.as_str() {
+                if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                    *total_difficulty = json!(val);
+                }
+            }
+        }
+
+        if let Some(timestamp) = obj.get_mut("timestamp") {
+            if let Some(hex) = timestamp.as_str() {
+                if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
+                    let datetime = DateTime::from_timestamp(val, 0)
+                        .unwrap_or_default();
+                    *timestamp = json!(datetime);
+                }
+            }
+        }
+    }
+    block
+}
+
+// Change function signature to async
+async fn convert_receipts_hex_to_decimal(receipts: Value, block_number: u64) -> Result<Value> {
+    let mut receipts_array = receipts.as_array().cloned()
+        .ok_or_else(|| anyhow::anyhow!("Receipts data is not an array"))?;
+
+    // Get block timestamp first
+    let block_data = get_block(block_number).await?;
+    let block_data = convert_block_hex_to_decimal(block_data);
+    let timestamp = block_data["timestamp"].clone();
+
+    for receipt in receipts_array.iter_mut() {
+        if let Some(obj) = receipt.as_object_mut() {
+            // Add block_number and block_timestamp fields
+            obj.insert("block_number".to_string(), json!(block_number as i64));
+            obj.insert("block_timestamp".to_string(), timestamp.clone());
+
+            // Convert numeric fields from hex to decimal
+            if let Some(cumulative_gas) = obj.get_mut("cumulativeGasUsed") {
+                if let Some(hex) = cumulative_gas.as_str() {
+                    if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                        *cumulative_gas = json!(val);
+                    }
+                }
+            }
+
+            if let Some(effective_gas) = obj.get_mut("effectiveGasPrice") {
+                if let Some(hex) = effective_gas.as_str() {
+                    if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                        *effective_gas = json!(val);
+                    }
+                }
+            }
+
+            if let Some(gas_used) = obj.get_mut("gasUsed") {
+                if let Some(hex) = gas_used.as_str() {
+                    if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
+                        *gas_used = json!(val);
+                    }
+                }
+            }
+
+            if let Some(transaction_index) = obj.get_mut("transactionIndex") {
+                if let Some(hex) = transaction_index.as_str() {
+                    if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
+                        *transaction_index = json!(val);
+                    }
+                }
+            }
+
+            // Rename type field to match struct
+            if let Some(type_val) = obj.remove("type") {
+                obj.insert("type_field".to_string(), type_val);
+            }
+        }
+    }
+
+    Ok(Value::Array(receipts_array))
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize logging with updated timer configuration
+    let _subscriber = FmtSubscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env()
+            .add_directive(Level::INFO.into()))
+        .with_file(true)
+        .with_line_number(true)
+        .with_thread_ids(true)
+        .with_thread_names(true)
+        .with_target(false)
+        .with_timer(tracing_subscriber::fmt::time::ChronoUtc::rfc_3339())
+        .pretty()
+        .try_init()
+        .expect("Failed to set tracing subscriber");
+
+    info!("Starting indexer application");
+    
     // Load .env from project root
     dotenv::from_path("../.env").ok();
+    info!("Loaded environment variables");
     
     let start = env::var("START")
         .unwrap_or_else(|_| "1".to_string())
@@ -234,11 +420,41 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()?;
 
-    println!("Starting indexing from block {} for {} blocks", start, count);
+    info!(
+        start_block = start,
+        block_count = count,
+        clickhouse_url = %clickhouse_url,
+        "Indexer configuration loaded"
+    );
 
+    let start_time = Instant::now();
+    info!("Initializing indexer...");
     let indexer = Indexer::new(&clickhouse_url, print_output).await?;
+    info!(
+        elapsed_ms = start_time.elapsed().as_millis(),
+        "Indexer initialized"
+    );
+
+    let process_time = Instant::now();
+    info!("Starting block processing...");
     indexer.process_blocks(start, count).await?;
-    // indexer.cleanup().await?;
+    info!(
+        elapsed_sec = process_time.elapsed().as_secs(),
+        "Block processing completed"
+    );
+
+    let cleanup_time = Instant::now();
+    info!("Running cleanup...");
+    indexer.cleanup().await?;
+    info!(
+        elapsed_ms = cleanup_time.elapsed().as_millis(),
+        "Cleanup completed"
+    );
+
+    info!(
+        total_elapsed_sec = start_time.elapsed().as_secs(),
+        "Indexer completed successfully"
+    );
 
     Ok(())
 }
