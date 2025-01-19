@@ -4,10 +4,10 @@ CREATE TABLE IF NOT EXISTS raw.receipts
     `blockTimestamp` DateTime,
     `blockHash` String,
     `contractAddress` Nullable(String),
-    `cumulativeGasUsed` Int256,
-    `effectiveGasPrice` Int256,
+    `cumulativeGasUsed` String,
+    `effectiveGasPrice` String,
     `from` String,
-    `gasUsed` Int256,
+    `gasUsed` String,
     `logs` Array(Tuple(
         address String,
         blockHash String,

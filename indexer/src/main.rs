@@ -44,6 +44,19 @@ struct Block {
 }
 
 #[derive(Debug, Serialize, Deserialize, Row)]
+struct Log {
+    address: String,
+    block_hash: String,
+    block_number: i64,
+    data: String,
+    log_index: String,
+    removed: bool,
+    topics: Vec<String>,
+    transaction_hash: String,
+    transaction_index: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Row)]
 struct Receipt {
     #[serde(rename = "blockNumber")]
     block_number: i64,
@@ -54,13 +67,15 @@ struct Receipt {
     #[serde(rename = "contractAddress")]
     contract_address: Option<String>,
     #[serde(rename = "cumulativeGasUsed")]
-    cumulative_gas_used: i128,
+    cumulative_gas_used: String,
     #[serde(rename = "effectiveGasPrice")]
-    effective_gas_price: i128,
+    effective_gas_price: String,
     from: String,
     #[serde(rename = "gasUsed")]
-    gas_used: i128,
-    logs: Vec<(String, String, i64, String, String, bool, Vec<String>, String, String)>,
+    gas_used: String,
+    #[serde(rename = "logs")]
+    #[serde(default = "Vec::new")]
+    logs: Vec<Log>,
     #[serde(rename = "logsBloom")]
     logs_bloom: String,
     status: String,
@@ -70,7 +85,7 @@ struct Receipt {
     #[serde(rename = "transactionIndex")]
     transaction_index: i64,
     #[serde(rename = "type")]
-    type_: String,
+    type_: String
 }
 
 struct Indexer {
@@ -123,6 +138,8 @@ impl Indexer {
 
         let mut receipt_inserter = self.client.inserter("receipts")?
             .with_timeouts(Some(Duration::from_secs(5)), Some(Duration::from_secs(20)));
+
+        let mut receipt_count = 0;
 
         for block_number in start..start + count {
             let block_time = Instant::now();
@@ -186,8 +203,30 @@ impl Indexer {
                     };
 
                     for receipt in receipts {
+                        if self.print_output {
+                            info!(
+                                "About to process receipt #{} for block {}, transaction hash: {}, logs count: {}\nFull receipt: {:#?}", 
+                                receipt_count,
+                                receipt.block_number,
+                                receipt.transaction_hash,
+                                receipt.logs.len(),
+                                receipt
+                            );
+                        }
+                        
                         receipt_inserter.write(&receipt).await?;
+                        
+                        if self.print_output {
+                            info!(
+                                "Successfully inserted receipt #{} for block {} with hash {}",
+                                receipt_count,
+                                receipt.block_number,
+                                receipt.transaction_hash
+                            );
+                        }
+                        receipt_count += 1;
                     }
+
                     info!(
                         block_number,
                         elapsed_ms = receipt_time.elapsed().as_millis(),
@@ -376,28 +415,22 @@ async fn convert_receipts_hex_to_decimal(receipts: Value, block_number: u64) -> 
             obj.insert("blockNumber".to_string(), json!(block_number as i64));
             obj.insert("blockTimestamp".to_string(), timestamp.clone());
 
-            // Convert numeric fields from hex to decimal
+            // Keep numeric fields as hex strings but remove "0x" prefix
             if let Some(cumulative_gas) = obj.get_mut("cumulativeGasUsed") {
                 if let Some(hex) = cumulative_gas.as_str() {
-                    if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
-                        *cumulative_gas = json!(val);
-                    }
+                    *cumulative_gas = json!(hex.trim_start_matches("0x").to_string());
                 }
             }
 
             if let Some(effective_gas) = obj.get_mut("effectiveGasPrice") {
                 if let Some(hex) = effective_gas.as_str() {
-                    if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
-                        *effective_gas = json!(val);
-                    }
+                    *effective_gas = json!(hex.trim_start_matches("0x").to_string());
                 }
             }
 
             if let Some(gas_used) = obj.get_mut("gasUsed") {
                 if let Some(hex) = gas_used.as_str() {
-                    if let Ok(val) = i128::from_str_radix(&hex[2..], 16) {
-                        *gas_used = json!(val);
-                    }
+                    *gas_used = json!(hex.trim_start_matches("0x").to_string());
                 }
             }
 
@@ -410,7 +443,7 @@ async fn convert_receipts_hex_to_decimal(receipts: Value, block_number: u64) -> 
                 }
             }
 
-            // Convert status from hex to decimal string (remove "0x" prefix)
+            // Keep status as hex string but remove "0x" prefix
             if let Some(status) = obj.get_mut("status") {
                 if let Some(hex) = status.as_str() {
                     *status = json!(hex.trim_start_matches("0x").to_string());
@@ -421,17 +454,15 @@ async fn convert_receipts_hex_to_decimal(receipts: Value, block_number: u64) -> 
             if let Some(logs) = obj.get_mut("logs").and_then(Value::as_array_mut) {
                 for log in logs {
                     if let Some(log_obj) = log.as_object_mut() {
-                        // Convert log index and transaction index to decimal before creating tuple
+                        // Keep logIndex and transactionIndex as strings
                         let log_index = log_obj.get("logIndex")
                             .and_then(Value::as_str)
-                            .and_then(|hex| i64::from_str_radix(&hex[2..], 16).ok())
-                            .map(|val| val.to_string())
+                            .map(|s| s.trim_start_matches("0x").to_string())
                             .unwrap_or_default();
                         
                         let tx_index = log_obj.get("transactionIndex")
                             .and_then(Value::as_str)
-                            .and_then(|hex| i64::from_str_radix(&hex[2..], 16).ok())
-                            .map(|val| val.to_string())
+                            .map(|s| s.trim_start_matches("0x").to_string())
                             .unwrap_or_default();
 
                         // Create tuple format
@@ -457,10 +488,38 @@ async fn convert_receipts_hex_to_decimal(receipts: Value, block_number: u64) -> 
                     }
                 }
             }
+
+            // Ensure 'to' field is present
+            if !obj.contains_key("to") {
+                obj.insert("to".to_string(), json!(""));
+            }
+
+            // Add debug logging
+            info!(
+                "Receipt after conversion: {}",
+                serde_json::to_string_pretty(obj).unwrap_or_default()
+            );
         }
     }
 
     Ok(Value::Array(receipts_array))
+}
+
+// Add this function to create a default empty log if needed
+impl Default for Log {
+    fn default() -> Self {
+        Self {
+            address: String::new(),
+            block_hash: String::new(),
+            block_number: 0,
+            data: String::new(),
+            log_index: String::new(),
+            removed: false,
+            topics: Vec::new(),
+            transaction_hash: String::new(),
+            transaction_index: String::new(),
+        }
+    }
 }
 
 #[tokio::main]

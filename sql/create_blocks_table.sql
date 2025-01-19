@@ -2,11 +2,11 @@ CREATE TABLE IF NOT EXISTS raw.blocks
 (
     `timestamp` DateTime,
     `number` Int64,
-    `baseFeePerGas` Nullable(Int256),
-    `difficulty` Nullable(Int256),
+    `baseFeePerGas` Nullable(String),
+    `difficulty` Nullable(String),
     `extraData` Nullable(String),
-    `gasLimit` Nullable(Int256),
-    `gasUsed` Nullable(Int256),
+    `gasLimit` Nullable(String),
+    `gasUsed` Nullable(String),
     `hash` String,
     `logsBloom` Nullable(String),
     `miner` Nullable(String),
@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS raw.blocks
     `parentHash` Nullable(String),
     `receiptsRoot` Nullable(String),
     `sha3Uncles` Nullable(String),
-    `size` Nullable(Int256),
+    `size` Nullable(String),
     `stateRoot` Nullable(String),
-    `totalDifficulty` Nullable(Int256),
+    `totalDifficulty` Nullable(String),
     `transactionsRoot` Nullable(String),
     `uncles` Array(Nullable(String))
 )

@@ -4,20 +4,20 @@ CREATE TABLE IF NOT EXISTS raw.transactions
     `blockHash` Nullable(String),
     `blockNumber` Int64,
     `from` String,
-    `gas` Int256,
-    `gasPrice` Int256,
+    `gas` String,
+    `gasPrice` String,
     `hash` String,
     `input` String,
     `nonce` String,
     `to` Nullable(String),
     `transactionIndex` Int64,
-    `value` Int256,
+    `value` String,
     `type` String,
     `v` String,
     `r` String,
     `s` String,
-    `maxFeePerGas` Nullable(Int256),
-    `maxPriorityFeePerGas` Nullable(Int256)
+    `maxFeePerGas` Nullable(String),
+    `maxPriorityFeePerGas` Nullable(String)
 )
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(blockTimestamp)
