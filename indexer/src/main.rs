@@ -78,17 +78,24 @@ impl Indexer {
         let client = Client::default()
             .with_url(clickhouse_url)
             .with_user(username)
-            .with_password(password)
-            .with_database("raw");
+            .with_password(password);
         
-        // Initialize database and tables
-        let init_queries = [
+        // Create database first
+        client.query(include_str!("../../sql/create_database.sql"))
+            .execute()
+            .await?;
+
+        // Update client to use the raw database
+        let client = client.with_database("raw");
+        
+        // Initialize tables
+        let table_queries = [
             include_str!("../../sql/create_blocks_table.sql"), 
             include_str!("../../sql/create_receipts_table.sql"),
             include_str!("../../sql/create_transactions_table.sql"),
         ];
 
-        for query in init_queries {
+        for query in table_queries {
             client.query(query).execute().await?;
         }
 
@@ -117,6 +124,7 @@ impl Indexer {
                     }
                     
                     let block: Block = serde_json::from_value(block_data)?;
+                    // Use load_blocks.sql query template
                     block_inserter.write(&block).await?;
                     println!("Block {} inserted into database", block_number);
                 },
@@ -132,6 +140,7 @@ impl Indexer {
                 }
                 
                 let receipts: Vec<Receipt> = serde_json::from_value(receipts_data)?;
+                // Use load_receipts.sql query template
                 for receipt in receipts {
                     receipt_inserter.write(&receipt).await?;
                 }
@@ -146,6 +155,14 @@ impl Indexer {
         println!("Blocks inserted: {} entries", block_stats.entries);
         println!("Receipts inserted: {} entries", receipt_stats.entries);
 
+        Ok(())
+    }
+
+    async fn cleanup(&self) -> Result<()> {
+        self.client
+            .query(include_str!("../../sql/cleanup.sql"))
+            .execute()
+            .await?;
         Ok(())
     }
 }
@@ -218,6 +235,7 @@ async fn main() -> Result<()> {
 
     let indexer = Indexer::new(&clickhouse_url, print_output).await?;
     indexer.process_blocks(start, count).await?;
+    // indexer.cleanup().await?;
 
     Ok(())
 }
