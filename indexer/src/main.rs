@@ -60,35 +60,17 @@ struct Receipt {
     from: String,
     #[serde(rename = "gasUsed")]
     gas_used: i128,
-    logs: Vec<Log>,
+    logs: Vec<(String, String, i64, String, String, bool, Vec<String>, String, String)>,
     #[serde(rename = "logsBloom")]
     logs_bloom: String,
     status: String,
-    to: Option<String>,
+    to: String,
     #[serde(rename = "transactionHash")]
     transaction_hash: String,
     #[serde(rename = "transactionIndex")]
     transaction_index: i64,
     #[serde(rename = "type")]
     type_: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Log {
-    address: String,
-    #[serde(rename = "blockHash")]
-    block_hash: String,
-    #[serde(rename = "blockNumber")]
-    block_number: i64,
-    data: String,
-    #[serde(rename = "logIndex")]
-    log_index: String,
-    removed: bool,
-    topics: Vec<String>,
-    #[serde(rename = "transactionHash")]
-    transaction_hash: String,
-    #[serde(rename = "transactionIndex")]
-    transaction_index: String,
 }
 
 struct Indexer {
@@ -419,48 +401,59 @@ async fn convert_receipts_hex_to_decimal(receipts: Value, block_number: u64) -> 
                 }
             }
 
-            if let Some(transaction_index) = obj.get_mut("transactionIndex") {
-                if let Some(hex) = transaction_index.as_str() {
+            // Convert transaction index from hex to decimal
+            if let Some(tx_index) = obj.get_mut("transactionIndex") {
+                if let Some(hex) = tx_index.as_str() {
                     if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
-                        *transaction_index = json!(val);
+                        *tx_index = json!(val);
                     }
                 }
             }
 
-            // Convert log indices from hex to decimal
+            // Convert status from hex to decimal string (remove "0x" prefix)
+            if let Some(status) = obj.get_mut("status") {
+                if let Some(hex) = status.as_str() {
+                    *status = json!(hex.trim_start_matches("0x").to_string());
+                }
+            }
+
+            // Convert logs to the tuple format
             if let Some(logs) = obj.get_mut("logs").and_then(Value::as_array_mut) {
                 for log in logs {
                     if let Some(log_obj) = log.as_object_mut() {
-                        if let Some(log_index) = log_obj.get_mut("logIndex") {
-                            if let Some(hex) = log_index.as_str() {
-                                if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
-                                    *log_index = json!(val.to_string());
-                                }
-                            }
-                        }
-                        if let Some(block_number) = log_obj.get_mut("blockNumber") {
-                            if let Some(hex) = block_number.as_str() {
-                                if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
-                                    *block_number = json!(val);
-                                }
-                            }
-                        }
-                        if let Some(tx_index) = log_obj.get_mut("transactionIndex") {
-                            if let Some(hex) = tx_index.as_str() {
-                                if let Ok(val) = i64::from_str_radix(&hex[2..], 16) {
-                                    *tx_index = json!(val.to_string());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                        // Convert log index and transaction index to decimal before creating tuple
+                        let log_index = log_obj.get("logIndex")
+                            .and_then(Value::as_str)
+                            .and_then(|hex| i64::from_str_radix(&hex[2..], 16).ok())
+                            .map(|val| val.to_string())
+                            .unwrap_or_default();
+                        
+                        let tx_index = log_obj.get("transactionIndex")
+                            .and_then(Value::as_str)
+                            .and_then(|hex| i64::from_str_radix(&hex[2..], 16).ok())
+                            .map(|val| val.to_string())
+                            .unwrap_or_default();
 
-            // Handle the type field - make sure it's a plain string without 0x prefix
-            if let Some(type_val) = obj.get_mut("type") {
-                if let Some(hex) = type_val.as_str() {
-                    if hex.starts_with("0x") {
-                        *type_val = json!(hex[2..].to_string());
+                        // Create tuple format
+                        let tuple = (
+                            log_obj.get("address").and_then(Value::as_str).unwrap_or_default().to_string(),
+                            log_obj.get("blockHash").and_then(Value::as_str).unwrap_or_default().to_string(),
+                            log_obj.get("blockNumber").and_then(Value::as_str)
+                                .and_then(|hex| i64::from_str_radix(&hex[2..], 16).ok())
+                                .unwrap_or_default(),
+                            log_obj.get("data").and_then(Value::as_str).unwrap_or_default().to_string(),
+                            log_index,
+                            log_obj.get("removed").and_then(Value::as_bool).unwrap_or_default(),
+                            log_obj.get("topics").and_then(Value::as_array)
+                                .map(|arr| arr.iter()
+                                    .filter_map(|v| v.as_str())
+                                    .map(String::from)
+                                    .collect::<Vec<String>>())
+                                .unwrap_or_default(),
+                            log_obj.get("transactionHash").and_then(Value::as_str).unwrap_or_default().to_string(),
+                            tx_index,
+                        );
+                        *log = json!(tuple);
                     }
                 }
             }
