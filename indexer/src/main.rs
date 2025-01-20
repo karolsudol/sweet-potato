@@ -98,6 +98,85 @@ struct Receipt {
     tx_type: String,
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
+struct TransformedReceipt {
+    block_hash: String,
+    block_number: u64,
+    contract_address: Option<String>,
+    cumulative_gas_used: u64,
+    effective_gas_price: u64,
+    from: String,
+    gas_used: u64,
+    logs: Vec<Value>,
+    logs_bloom: String,
+    status: bool,
+    to: Option<String>,
+    transaction_hash: String,
+    transaction_index: u64,
+    tx_type: u64,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+struct TransformedTransaction {
+    block_hash: String,
+    block_number: u64,
+    chain_id: u64,
+    from: String,
+    gas: u64,
+    gas_price: u64,
+    hash: String,
+    input: String,
+    nonce: u64,
+    r: String,
+    s: String,
+    to: Option<String>,
+    transaction_index: u64,
+    tx_type: u64,
+    v: String,
+    value: u64,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+struct TransformedBlock {
+    base_fee_per_gas: Option<u64>,
+    difficulty: u64,
+    extra_data: String,
+    gas_limit: u64,
+    gas_used: u64,
+    hash: String,
+    logs_bloom: String,
+    miner: String,
+    mix_hash: String,
+    nonce: String,
+    number: u64,
+    parent_hash: String,
+    receipts_root: String,
+    sha3_uncles: String,
+    size: u64,
+    state_root: String,
+    timestamp: u64,
+    total_difficulty: u64,
+    transaction_hashes: Vec<String>,
+    transactions_root: String,
+    uncles: Vec<String>,
+}
+
+// Helper functions
+fn hex_to_u64(hex: &str) -> u64 {
+    if let Some(hex_str) = hex.strip_prefix("0x") {
+        u64::from_str_radix(hex_str, 16).unwrap_or(0)
+    } else {
+        u64::from_str_radix(hex, 16).unwrap_or(0)
+    }
+}
+
+fn hex_to_bool(hex: &str) -> bool {
+    hex_to_u64(hex) == 1
+}
+
 async fn get_block(number: u64) -> Result<(Block, Vec<Transaction>)> {
     let start = Instant::now();
     let client = reqwest::Client::new();
@@ -236,6 +315,96 @@ async fn main() -> Result<()> {
     
     log::debug!("\n=== All Receipts ===");
     log::debug!("{:#?}", all_receipts);
+
+    // Transform the data
+    log::info!("Converting hex values to appropriate types...");
+    
+    let transformed_blocks: Vec<TransformedBlock> = all_blocks.iter().map(|block| {
+        TransformedBlock {
+            base_fee_per_gas: block.base_fee_per_gas.as_ref().map(|x| hex_to_u64(x)),
+            difficulty: hex_to_u64(&block.difficulty),
+            extra_data: block.extra_data.clone(),
+            gas_limit: hex_to_u64(&block.gas_limit),
+            gas_used: hex_to_u64(&block.gas_used),
+            hash: block.hash.clone(),
+            logs_bloom: block.logs_bloom.clone(),
+            miner: block.miner.clone(),
+            mix_hash: block.mix_hash.clone(),
+            nonce: block.nonce.clone(),
+            number: hex_to_u64(&block.number),
+            parent_hash: block.parent_hash.clone(),
+            receipts_root: block.receipts_root.clone(),
+            sha3_uncles: block.sha3_uncles.clone(),
+            size: hex_to_u64(&block.size),
+            state_root: block.state_root.clone(),
+            timestamp: hex_to_u64(&block.timestamp),
+            total_difficulty: hex_to_u64(&block.total_difficulty),
+            transaction_hashes: block.transaction_hashes.clone(),
+            transactions_root: block.transactions_root.clone(),
+            uncles: block.uncles.clone(),
+        }
+    }).collect();
+
+    let transformed_transactions: Vec<TransformedTransaction> = all_transactions.iter().map(|tx| {
+        TransformedTransaction {
+            block_hash: tx.block_hash.clone(),
+            block_number: hex_to_u64(&tx.block_number),
+            chain_id: hex_to_u64(&tx.chain_id),
+            from: tx.from.clone(),
+            gas: hex_to_u64(&tx.gas),
+            gas_price: hex_to_u64(&tx.gas_price),
+            hash: tx.hash.clone(),
+            input: tx.input.clone(),
+            nonce: hex_to_u64(&tx.nonce),
+            r: tx.r.clone(),
+            s: tx.s.clone(),
+            to: tx.to.clone(),
+            transaction_index: hex_to_u64(&tx.transaction_index),
+            tx_type: hex_to_u64(&tx.tx_type),
+            v: tx.v.clone(),
+            value: hex_to_u64(&tx.value),
+        }
+    }).collect();
+
+    let transformed_receipts: Vec<Vec<TransformedReceipt>> = all_receipts.iter().map(|block_receipts| {
+        block_receipts.iter().map(|receipt| {
+            TransformedReceipt {
+                block_hash: receipt.block_hash.clone(),
+                block_number: hex_to_u64(&receipt.block_number),
+                contract_address: receipt.contract_address.clone(),
+                cumulative_gas_used: hex_to_u64(&receipt.cumulative_gas_used),
+                effective_gas_price: hex_to_u64(&receipt.effective_gas_price),
+                from: receipt.from.clone(),
+                gas_used: hex_to_u64(&receipt.gas_used),
+                logs: receipt.logs.clone(),
+                logs_bloom: receipt.logs_bloom.clone(),
+                status: hex_to_bool(&receipt.status),
+                to: receipt.to.clone(),
+                transaction_hash: receipt.transaction_hash.clone(),
+                transaction_index: hex_to_u64(&receipt.transaction_index),
+                tx_type: hex_to_u64(&receipt.tx_type),
+            }
+        }).collect()
+    }).collect();
+
+    // Print comparison of original and transformed data
+    log::info!("\n=== Data Transformation Results ===");
+    log::info!("Original Blocks: {} | Transformed Blocks: {}", 
+        all_blocks.len(), transformed_blocks.len());
+    log::info!("Original Transactions: {} | Transformed Transactions: {}", 
+        all_transactions.len(), transformed_transactions.len());
+    log::info!("Original Receipt Sets: {} | Transformed Receipt Sets: {}", 
+        all_receipts.len(), transformed_receipts.len());
+
+    // Print detailed transformed data when debug is enabled
+    log::debug!("\n=== Transformed Blocks ===");
+    log::debug!("{:#?}", transformed_blocks);
+    
+    log::debug!("\n=== Transformed Transactions ===");
+    log::debug!("{:#?}", transformed_transactions);
+    
+    log::debug!("\n=== Transformed Receipts ===");
+    log::debug!("{:#?}", transformed_receipts);
 
     Ok(())
 }
