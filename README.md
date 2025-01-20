@@ -3,13 +3,7 @@ Node Indexing Pipeline - EVM
 
 ## Database Operations
 
-<<<<<<< HEAD
-## Usage
-
-Basic usage:
-=======
 ### Start the Database
->>>>>>> main
 ```bash
 # Start the database
 docker compose up -d
@@ -18,19 +12,6 @@ docker compose up -d
 curl 'http://localhost:8123/?query=SHOW%20DATABASES'
 ```
 
-<<<<<<< HEAD
-Logging levels:
-```bash
-# No logging output (except errors)
-START=100 COUNT=5 cargo run
-
-# Summary information only
-RUST_LOG=info START=100 COUNT=5 cargo run
-
-# Full debug output including data structures
-RUST_LOG=debug START=100 COUNT=5 cargo run
-```
-=======
 ### Tear Down the Database
 ```bash
 # Stop and remove containers
@@ -66,4 +47,3 @@ cd indexer && START=1000 COUNT=10 PRINT_OUTPUT=true cargo run
 # Use custom database URL
 cd indexer && CLICKHOUSE_URL="http://custom-host:8123" cargo run
 ```
->>>>>>> main
