@@ -321,11 +321,7 @@ async fn main() -> Result<()> {
     log::info!("Total execution time: {:?}", start_time.elapsed());
     log::info!("Blocks processed: {}", all_blocks.len());
     log::info!("Transactions processed: {}", all_transactions.len());
-    log::info!("Original Receipt Sets: {} (containing {} total receipts) | Transformed Receipt Sets: {} (containing {} total receipts)", 
-        all_receipts.len(),
-        all_receipts.iter().map(|r| r.len()).sum::<usize>(),
-        all_receipts.len(),
-        all_receipts.iter().map(|r| r.len()).sum::<usize>());
+    log::info!("Total receipts processed: {}", all_receipts.iter().map(|r| r.len()).sum::<usize>());
     
     // Only print detailed data when debug level is enabled
     log::debug!("\n=== All Blocks ===");
@@ -430,11 +426,8 @@ async fn main() -> Result<()> {
         all_blocks.len(), transformed_blocks.len());
     log::info!("Original Transactions: {} | Transformed Transactions: {}", 
         all_transactions.len(), transformed_transactions.len());
-    log::info!("Original Receipt Sets: {} (containing {} total receipts) | Transformed Receipt Sets: {} (containing {} total receipts)", 
-        all_receipts.len(),
-        all_receipts.iter().map(|r| r.len()).sum::<usize>(),
-        transformed_receipts.len(),
-        transformed_receipts.iter().map(|r| r.len()).sum::<usize>());
+    log::info!("Original Receipt Sets: {} | Transformed Receipt Sets: {}", 
+        all_receipts.len(), transformed_receipts.len());
 
     // Print detailed transformed data when debug is enabled
     log::debug!("\n=== Transformed Blocks ===");
@@ -474,7 +467,7 @@ async fn main() -> Result<()> {
     }
 
     // Save transformed receipts
-    for (block_index, receipt_block) in transformed_receipts.iter().enumerate() {
+    for (_block_index, receipt_block) in transformed_receipts.iter().enumerate() {
         for receipt in receipt_block {
             let filename = format!("{}/receipt_{}.json", receipts_dir, receipt.transaction_hash);
             let json = serde_json::to_string_pretty(receipt)?;
