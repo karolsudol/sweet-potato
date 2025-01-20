@@ -15,3 +15,5 @@ dotenv = "0.15"
 tracing-subscriber = { version = "0.3", features = ["time", "env-filter", "chrono"] }
 tracing = "=0.1.40"
 primitive-types = "0.12.1"
+log = "0.4"
+env_logger = "0.10"
