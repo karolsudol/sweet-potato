@@ -209,21 +209,22 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Print final summary with full arrays
+    // Print summary with logging levels
     log::info!("=== Processing Summary ===");
     log::info!("Total execution time: {:?}", start_time.elapsed());
     log::info!("Blocks processed: {}", all_blocks.len());
     log::info!("Transactions processed: {}", all_transactions.len());
     log::info!("Total receipts processed: {}", all_receipts.iter().map(|r| r.len()).sum::<usize>());
     
-    println!("\n=== All Blocks ===");
-    println!("{:#?}", all_blocks);
+    // Only print detailed data when debug level is enabled
+    log::debug!("\n=== All Blocks ===");
+    log::debug!("{:#?}", all_blocks);
     
-    println!("\n=== All Transactions ===");
-    println!("{:#?}", all_transactions);
+    log::debug!("\n=== All Transactions ===");
+    log::debug!("{:#?}", all_transactions);
     
-    println!("\n=== All Receipts ===");
-    println!("{:#?}", all_receipts);
+    log::debug!("\n=== All Receipts ===");
+    log::debug!("{:#?}", all_receipts);
 
     Ok(())
 }
