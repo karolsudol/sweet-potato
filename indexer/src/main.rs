@@ -482,3 +482,130 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    #[test]
+    fn test_hex_to_u64() {
+        assert_eq!(hex_to_u64("0x0"), 0);
+        assert_eq!(hex_to_u64("0x1"), 1);
+        assert_eq!(hex_to_u64("0xa"), 10);
+        assert_eq!(hex_to_u64("0xff"), 255);
+        assert_eq!(hex_to_u64("ff"), 255); // Test without 0x prefix
+        assert_eq!(hex_to_u64("invalid"), 0); // Test invalid input
+    }
+
+    #[test]
+    fn test_hex_to_bool() {
+        assert_eq!(hex_to_bool("0x0"), false);
+        assert_eq!(hex_to_bool("0x1"), true);
+        assert_eq!(hex_to_bool("0x2"), false); // Any non-1 value should be false
+        assert_eq!(hex_to_bool("invalid"), false); // Invalid input should return false
+    }
+
+    #[test]
+    fn test_block_transformation() {
+        let block = Block {
+            base_fee_per_gas: Some("0xa".to_string()),
+            difficulty: "0x5".to_string(),
+            extra_data: "0x".to_string(),
+            gas_limit: "0x1234".to_string(),
+            gas_used: "0x1000".to_string(),
+            hash: "0xabc".to_string(),
+            logs_bloom: "0x0".to_string(),
+            miner: "0xdef".to_string(),
+            mix_hash: "0x123".to_string(),
+            nonce: "0x1".to_string(),
+            number: "0x1".to_string(),
+            parent_hash: "0x456".to_string(),
+            receipts_root: "0x789".to_string(),
+            sha3_uncles: "0x111".to_string(),
+            size: "0x100".to_string(),
+            state_root: "0x222".to_string(),
+            timestamp: "0x60000000".to_string(), // Unix timestamp in hex
+            total_difficulty: "0x10".to_string(),
+            transaction_hashes: vec!["0xtx1".to_string()],
+            transactions_root: "0x333".to_string(),
+            uncles: vec![],
+        };
+
+        let transformed = TransformedBlock {
+            base_fee_per_gas: Some(10),
+            difficulty: 5,
+            extra_data: "0x".to_string(),
+            gas_limit: 0x1234,
+            gas_used: 0x1000,
+            hash: "0xabc".to_string(),
+            logs_bloom: "0x0".to_string(),
+            miner: "0xdef".to_string(),
+            mix_hash: "0x123".to_string(),
+            nonce: "0x1".to_string(),
+            number: 1,
+            parent_hash: "0x456".to_string(),
+            receipts_root: "0x789".to_string(),
+            sha3_uncles: "0x111".to_string(),
+            size: 0x100,
+            state_root: "0x222".to_string(),
+            datetime: Utc.timestamp_opt(0x60000000, 0).unwrap(),
+            total_difficulty: 16,
+            transaction_hashes: vec!["0xtx1".to_string()],
+            transactions_root: "0x333".to_string(),
+            uncles: vec![],
+        };
+
+        let ts = hex_to_u64(&block.timestamp);
+        let datetime = Utc.timestamp_opt(ts as i64, 0).single().unwrap_or_default();
+        let result = TransformedBlock {
+            base_fee_per_gas: block.base_fee_per_gas.as_ref().map(|x| hex_to_u64(x)),
+            difficulty: hex_to_u64(&block.difficulty),
+            extra_data: block.extra_data.clone(),
+            gas_limit: hex_to_u64(&block.gas_limit),
+            gas_used: hex_to_u64(&block.gas_used),
+            hash: block.hash.clone(),
+            logs_bloom: block.logs_bloom.clone(),
+            miner: block.miner.clone(),
+            mix_hash: block.mix_hash.clone(),
+            nonce: block.nonce.clone(),
+            number: hex_to_u64(&block.number),
+            parent_hash: block.parent_hash.clone(),
+            receipts_root: block.receipts_root.clone(),
+            sha3_uncles: block.sha3_uncles.clone(),
+            size: hex_to_u64(&block.size),
+            state_root: block.state_root.clone(),
+            datetime,
+            total_difficulty: hex_to_u64(&block.total_difficulty),
+            transaction_hashes: block.transaction_hashes.clone(),
+            transactions_root: block.transactions_root.clone(),
+            uncles: block.uncles.clone(),
+        };
+
+        assert_eq!(result.base_fee_per_gas, transformed.base_fee_per_gas);
+        assert_eq!(result.difficulty, transformed.difficulty);
+        assert_eq!(result.gas_limit, transformed.gas_limit);
+        assert_eq!(result.gas_used, transformed.gas_used);
+        assert_eq!(result.number, transformed.number);
+        assert_eq!(result.size, transformed.size);
+        assert_eq!(result.total_difficulty, transformed.total_difficulty);
+    }
+
+    #[test]
+    fn test_ensure_directory() {
+        let test_dir = "test_dir";
+        
+        // Clean up any existing test directory
+        if Path::new(test_dir).exists() {
+            fs::remove_dir_all(test_dir).unwrap();
+        }
+        
+        // Test directory creation
+        assert!(!Path::new(test_dir).exists());
+        ensure_directory(test_dir).unwrap();
+        assert!(Path::new(test_dir).exists());
+        
+        // Clean up
+        fs::remove_dir_all(test_dir).unwrap();
+    }
+}
