@@ -4,7 +4,10 @@ use serde_json::{json, Value};
 use std::env;
 use std::time::Instant;
 
-const RPC_URL: &str = "https://rpc.sepolia.linea.build";
+const RPC_URL: &str = match option_env!("RPC_URL") {
+    Some(url) => url,
+    None => "https://rpc.sepolia.linea.build",
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Transaction {
@@ -254,6 +257,7 @@ async fn get_block_receipts(number: u64) -> Result<Vec<Receipt>> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv::from_path("../.env").ok();
     env_logger::init();
     let start_time = Instant::now();
     
