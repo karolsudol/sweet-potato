@@ -1,12 +1,108 @@
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
+use std::time::Instant;
 
 const RPC_URL: &str = "https://rpc.sepolia.linea.build";
 
-async fn get_block(number: u64) -> Result<Value> {
+#[derive(Debug, Serialize, Deserialize)]
+struct Transaction {
+    #[serde(rename = "blockHash")]
+    block_hash: String,
+    #[serde(rename = "blockNumber")]
+    block_number: String,
+    #[serde(rename = "chainId")]
+    chain_id: String,
+    from: String,
+    gas: String,
+    #[serde(rename = "gasPrice")]
+    gas_price: String,
+    hash: String,
+    input: String,
+    nonce: String,
+    r: String,
+    s: String,
+    to: Option<String>,
+    #[serde(rename = "transactionIndex")]
+    transaction_index: String,
+    #[serde(rename = "type")]
+    tx_type: String,
+    v: String,
+    value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Block {
+    #[serde(rename = "baseFeePerGas")]
+    base_fee_per_gas: Option<String>,
+    difficulty: String,
+    #[serde(rename = "extraData")]
+    extra_data: String,
+    #[serde(rename = "gasLimit")]
+    gas_limit: String,
+    #[serde(rename = "gasUsed")]
+    gas_used: String,
+    hash: String,
+    #[serde(rename = "logsBloom")]
+    logs_bloom: String,
+    miner: String,
+    #[serde(rename = "mixHash")]
+    mix_hash: String,
+    nonce: String,
+    number: String,
+    #[serde(rename = "parentHash")]
+    parent_hash: String,
+    #[serde(rename = "receiptsRoot")]
+    receipts_root: String,
+    #[serde(rename = "sha3Uncles")]
+    sha3_uncles: String,
+    size: String,
+    #[serde(rename = "stateRoot")]
+    state_root: String,
+    timestamp: String,
+    #[serde(rename = "totalDifficulty")]
+    total_difficulty: String,
+    transactions: Vec<Transaction>,
+    #[serde(rename = "transactionsRoot")]
+    transactions_root: String,
+    uncles: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Receipt {
+    #[serde(rename = "blockHash")]
+    block_hash: String,
+    #[serde(rename = "blockNumber")]
+    block_number: String,
+    #[serde(rename = "contractAddress")]
+    contract_address: Option<String>,
+    #[serde(rename = "cumulativeGasUsed")]
+    cumulative_gas_used: String,
+    #[serde(rename = "effectiveGasPrice")]
+    effective_gas_price: String,
+    from: String,
+    #[serde(rename = "gasUsed")]
+    gas_used: String,
+    logs: Vec<Value>,
+    #[serde(rename = "logsBloom")]
+    logs_bloom: String,
+    status: String,
+    to: Option<String>,
+    #[serde(rename = "transactionHash")]
+    transaction_hash: String,
+    #[serde(rename = "transactionIndex")]
+    transaction_index: String,
+    #[serde(rename = "type")]
+    tx_type: String,
+}
+
+async fn get_block(number: u64) -> Result<Block> {
+    let start = Instant::now();
     let client = reqwest::Client::new();
     let hex_number = format!("0x{:x}", number);
+    
+    log::info!("Fetching block {}", number);
     
     let response = client
         .post(RPC_URL)
@@ -20,15 +116,24 @@ async fn get_block(number: u64) -> Result<Value> {
         .await?;
 
     let data: Value = response.json().await?;
+    let elapsed = start.elapsed();
+    
     match data.get("result") {
-        Some(result) => Ok(result.clone()),
+        Some(result) => {
+            let block: Block = serde_json::from_value(result.clone())?;
+            log::info!("Block {} fetched in {:?}", number, elapsed);
+            Ok(block)
+        },
         None => Err(anyhow::anyhow!("No result field in response"))
     }
 }
 
-async fn get_block_receipts(number: u64) -> Result<Value> {
+async fn get_block_receipts(number: u64) -> Result<Vec<Receipt>> {
+    let start = Instant::now();
     let client = reqwest::Client::new();
     let hex_number = format!("0x{:x}", number);
+    
+    log::info!("Fetching receipts for block {}", number);
     
     let response = client
         .post(RPC_URL)
@@ -42,14 +147,23 @@ async fn get_block_receipts(number: u64) -> Result<Value> {
         .await?;
 
     let data: Value = response.json().await?;
+    let elapsed = start.elapsed();
+    
     match data.get("result") {
-        Some(result) => Ok(result.clone()),
+        Some(result) => {
+            let receipts: Vec<Receipt> = serde_json::from_value(result.clone())?;
+            log::info!("Receipts for block {} fetched in {:?}", number, elapsed);
+            Ok(receipts)
+        },
         None => Err(anyhow::anyhow!("No result field in response"))
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    env_logger::init();
+    let start_time = Instant::now();
+    
     // Get START and COUNT from environment variables
     let start = env::var("START")
         .unwrap_or_else(|_| "1".to_string())
@@ -59,30 +173,34 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|_| "1".to_string())
         .parse::<u64>()?;
 
-    println!("Starting indexing from block {} for {} blocks", start, count);
+    log::info!("Starting indexing from block {} for {} blocks", start, count);
 
     for block_number in start..start + count {
-        println!("\nProcessing block {}", block_number);
+        let block_start = Instant::now();
+        log::info!("Processing block {}", block_number);
         
-        // Get block data and handle errors more gracefully
-        match get_block(block_number).await {
-            Ok(_block) => {
-                println!("Block data: {}", serde_json::to_string_pretty(&_block)?);
-            },
-            Err(e) => {
-                eprintln!("Error fetching block {}: {}", block_number, e);
-                continue;
-            }
-        };
+        // Fetch block and receipts concurrently
+        let (block_result, receipts_result) = tokio::join!(
+            get_block(block_number),
+            get_block_receipts(block_number)
+        );
 
-        // Only fetch receipts if we successfully got the block
-        if let Err(e) = get_block_receipts(block_number).await.and_then(|receipts| {
-            println!("Block receipts: {}", serde_json::to_string_pretty(&receipts)?);
-            Ok(())
-        }) {
-            eprintln!("Error fetching receipts for block {}: {}", block_number, e);
+        match (block_result, receipts_result) {
+            (Ok(block), Ok(receipts)) => {
+                log::info!("Block {} processed successfully:", block_number);
+                log::info!("  - {} transactions", block.transactions.len());
+                log::info!("  - {} receipts", receipts.len());
+                log::info!("  - Block processing time: {:?}", block_start.elapsed());
+            },
+            (Err(e), _) => {
+                log::error!("Error fetching block {}: {}", block_number, e);
+            },
+            (_, Err(e)) => {
+                log::error!("Error fetching receipts for block {}: {}", block_number, e);
+            }
         }
     }
 
+    log::info!("Indexing completed in {:?}", start_time.elapsed());
     Ok(())
 }
