@@ -63,7 +63,8 @@ struct Block {
     timestamp: String,
     #[serde(rename = "totalDifficulty")]
     total_difficulty: String,
-    transactions: Vec<Transaction>,
+    #[serde(rename = "transactions")]
+    transaction_hashes: Vec<String>,
     #[serde(rename = "transactionsRoot")]
     transactions_root: String,
     uncles: Vec<String>,
@@ -97,7 +98,7 @@ struct Receipt {
     tx_type: String,
 }
 
-async fn get_block(number: u64) -> Result<Block> {
+async fn get_block(number: u64) -> Result<(Block, Vec<Transaction>)> {
     let start = Instant::now();
     let client = reqwest::Client::new();
     let hex_number = format!("0x{:x}", number);
@@ -120,9 +121,22 @@ async fn get_block(number: u64) -> Result<Block> {
     
     match data.get("result") {
         Some(result) => {
-            let block: Block = serde_json::from_value(result.clone())?;
+            // First, parse the full response to get transactions
+            let full_block: Value = result.clone();
+            let transactions: Vec<Transaction> = serde_json::from_value(full_block["transactions"].clone())?;
+            
+            // Then modify the transactions field to only contain hashes
+            let mut block_value = result.clone();
+            if let Some(txs) = block_value.as_object_mut() {
+                let tx_hashes: Vec<String> = transactions.iter()
+                    .map(|tx| tx.hash.clone())
+                    .collect();
+                txs["transactions"] = json!(tx_hashes);
+            }
+            
+            let block: Block = serde_json::from_value(block_value)?;
             log::info!("Block {} fetched in {:?}", number, elapsed);
-            Ok(block)
+            Ok((block, transactions))
         },
         None => Err(anyhow::anyhow!("No result field in response"))
     }
@@ -189,14 +203,11 @@ async fn main() -> Result<()> {
         );
 
         match (block_result, receipts_result) {
-            (Ok(block), Ok(receipts)) => {
+            (Ok((block, block_transactions)), Ok(receipts)) => {
                 log::info!("Block {} processed in {:?}", block_number, block_start.elapsed());
                 
-                // Extract transactions and store them separately
-                let block_transactions = block.transactions.clone();
-                all_transactions.extend(block_transactions);
-                
                 // Store the results
+                all_transactions.extend(block_transactions);
                 all_blocks.push(block);
                 all_receipts.push(receipts);
             },
