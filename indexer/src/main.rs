@@ -6,7 +6,7 @@ use std::time::Instant;
 
 const RPC_URL: &str = "https://rpc.sepolia.linea.build";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Transaction {
     #[serde(rename = "blockHash")]
     block_hash: String,
@@ -164,7 +164,6 @@ async fn main() -> Result<()> {
     env_logger::init();
     let start_time = Instant::now();
     
-    // Get START and COUNT from environment variables
     let start = env::var("START")
         .unwrap_or_else(|_| "1".to_string())
         .parse::<u64>()?;
@@ -175,11 +174,15 @@ async fn main() -> Result<()> {
 
     log::info!("Starting indexing from block {} for {} blocks", start, count);
 
+    // Create vectors to store all data
+    let mut all_blocks = Vec::new();
+    let mut all_transactions = Vec::new();
+    let mut all_receipts = Vec::new();
+
     for block_number in start..start + count {
         let block_start = Instant::now();
         log::info!("Processing block {}", block_number);
         
-        // Fetch block and receipts concurrently
         let (block_result, receipts_result) = tokio::join!(
             get_block(block_number),
             get_block_receipts(block_number)
@@ -187,10 +190,15 @@ async fn main() -> Result<()> {
 
         match (block_result, receipts_result) {
             (Ok(block), Ok(receipts)) => {
-                log::info!("Block {} processed successfully:", block_number);
-                log::info!("  - {} transactions", block.transactions.len());
-                log::info!("  - {} receipts", receipts.len());
-                log::info!("  - Block processing time: {:?}", block_start.elapsed());
+                log::info!("Block {} processed in {:?}", block_number, block_start.elapsed());
+                
+                // Extract transactions and store them separately
+                let block_transactions = block.transactions.clone();
+                all_transactions.extend(block_transactions);
+                
+                // Store the results
+                all_blocks.push(block);
+                all_receipts.push(receipts);
             },
             (Err(e), _) => {
                 log::error!("Error fetching block {}: {}", block_number, e);
@@ -201,6 +209,21 @@ async fn main() -> Result<()> {
         }
     }
 
-    log::info!("Indexing completed in {:?}", start_time.elapsed());
+    // Print final summary with full arrays
+    log::info!("=== Processing Summary ===");
+    log::info!("Total execution time: {:?}", start_time.elapsed());
+    log::info!("Blocks processed: {}", all_blocks.len());
+    log::info!("Transactions processed: {}", all_transactions.len());
+    log::info!("Total receipts processed: {}", all_receipts.iter().map(|r| r.len()).sum::<usize>());
+    
+    println!("\n=== All Blocks ===");
+    println!("{:#?}", all_blocks);
+    
+    println!("\n=== All Transactions ===");
+    println!("{:#?}", all_transactions);
+    
+    println!("\n=== All Receipts ===");
+    println!("{:#?}", all_receipts);
+
     Ok(())
 }
