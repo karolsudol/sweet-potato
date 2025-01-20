@@ -4,13 +4,23 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.36", features = ["full"] }
-reqwest = { version = "0.11", features = ["json"] }
+anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+<<<<<<< HEAD
 anyhow = "1.0"
 hex = "0.4"
 log = "0.4"
 env_logger = "0.10"
 dotenv = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
+=======
+tokio = { version = "1.0", features = ["full"] }
+clickhouse = { version = "0.11", features = ["uuid"] }
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.11", features = ["json"] }
+dotenv = "0.15"
+tracing-subscriber = { version = "0.3", features = ["time", "env-filter", "chrono"] }
+tracing = "=0.1.40"
+primitive-types = "0.12.1"
+>>>>>>> main

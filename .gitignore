@@ -1,4 +1,10 @@
 .env
+<<<<<<< HEAD
 db/user_files/*
 indexer/target/*
 indexer/raw_data/*
+=======
+/indexer/target/
+/indexer/Cargo.lock
+db/user_files
+>>>>>>> main
