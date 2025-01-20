@@ -4,6 +4,8 @@ use serde_json::{json, Value};
 use std::env;
 use std::time::Instant;
 use chrono::{DateTime, Utc, TimeZone};
+use std::fs;
+use std::path::Path;
 
 const RPC_URL: &str = match option_env!("RPC_URL") {
     Some(url) => url,
@@ -103,7 +105,7 @@ struct Receipt {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct TransformedReceipt {
     block_hash: String,
     block_number: u64,
@@ -123,7 +125,7 @@ struct TransformedReceipt {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct TransformedTransaction {
     block_hash: String,
     block_number: u64,
@@ -145,7 +147,7 @@ struct TransformedTransaction {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct TransformedBlock {
     base_fee_per_gas: Option<u64>,
     difficulty: u64,
@@ -258,6 +260,14 @@ async fn get_block_receipts(number: u64) -> Result<Vec<Receipt>> {
     }
 }
 
+// Add this function near other helper functions
+fn ensure_directory(path: &str) -> Result<()> {
+    if !Path::new(path).exists() {
+        fs::create_dir_all(path)?;
+    }
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv::from_path("../.env").ok();
@@ -311,7 +321,11 @@ async fn main() -> Result<()> {
     log::info!("Total execution time: {:?}", start_time.elapsed());
     log::info!("Blocks processed: {}", all_blocks.len());
     log::info!("Transactions processed: {}", all_transactions.len());
-    log::info!("Total receipts processed: {}", all_receipts.iter().map(|r| r.len()).sum::<usize>());
+    log::info!("Original Receipt Sets: {} (containing {} total receipts) | Transformed Receipt Sets: {} (containing {} total receipts)", 
+        all_receipts.len(),
+        all_receipts.iter().map(|r| r.len()).sum::<usize>(),
+        all_receipts.len(),
+        all_receipts.iter().map(|r| r.len()).sum::<usize>());
     
     // Only print detailed data when debug level is enabled
     log::debug!("\n=== All Blocks ===");
@@ -416,8 +430,11 @@ async fn main() -> Result<()> {
         all_blocks.len(), transformed_blocks.len());
     log::info!("Original Transactions: {} | Transformed Transactions: {}", 
         all_transactions.len(), transformed_transactions.len());
-    log::info!("Original Receipt Sets: {} | Transformed Receipt Sets: {}", 
-        all_receipts.len(), transformed_receipts.len());
+    log::info!("Original Receipt Sets: {} (containing {} total receipts) | Transformed Receipt Sets: {} (containing {} total receipts)", 
+        all_receipts.len(),
+        all_receipts.iter().map(|r| r.len()).sum::<usize>(),
+        transformed_receipts.len(),
+        transformed_receipts.iter().map(|r| r.len()).sum::<usize>());
 
     // Print detailed transformed data when debug is enabled
     log::debug!("\n=== Transformed Blocks ===");
@@ -428,6 +445,47 @@ async fn main() -> Result<()> {
     
     log::debug!("\n=== Transformed Receipts ===");
     log::debug!("{:#?}", transformed_receipts);
+
+    // Get RAW_DATA_PATH from environment
+    let raw_data_path = env::var("RAW_DATA_PATH")
+        .unwrap_or_else(|_| "./raw_data".to_string());
+
+    // Ensure directories exist
+    let blocks_dir = format!("{}/blocks", raw_data_path);
+    let transactions_dir = format!("{}/transactions", raw_data_path);
+    let receipts_dir = format!("{}/receipts", raw_data_path);
+
+    ensure_directory(&blocks_dir)?;
+    ensure_directory(&transactions_dir)?;
+    ensure_directory(&receipts_dir)?;
+
+    // Save transformed blocks
+    for block in &transformed_blocks {
+        let filename = format!("{}/block_{}.json", blocks_dir, block.number);
+        let json = serde_json::to_string_pretty(block)?;
+        fs::write(filename, json)?;
+    }
+
+    // Save transformed transactions
+    for tx in &transformed_transactions {
+        let filename = format!("{}/tx_{}.json", transactions_dir, tx.hash);
+        let json = serde_json::to_string_pretty(tx)?;
+        fs::write(filename, json)?;
+    }
+
+    // Save transformed receipts
+    for (block_index, receipt_block) in transformed_receipts.iter().enumerate() {
+        for receipt in receipt_block {
+            let filename = format!("{}/receipt_{}.json", receipts_dir, receipt.transaction_hash);
+            let json = serde_json::to_string_pretty(receipt)?;
+            fs::write(filename, json)?;
+        }
+    }
+
+    log::info!("Data saved to directories:");
+    log::info!("  Blocks: {}", blocks_dir);
+    log::info!("  Transactions: {}", transactions_dir);
+    log::info!("  Receipts: {}", receipts_dir);
 
     Ok(())
 }

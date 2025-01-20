@@ -1,3 +1,4 @@
 .env
 db/user_files/*
 indexer/target/*
+indexer/raw_data/*
