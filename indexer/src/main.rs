@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
 use std::time::Instant;
+use chrono::{DateTime, Utc, TimeZone};
 
 const RPC_URL: &str = match option_env!("RPC_URL") {
     Some(url) => url,
@@ -118,6 +119,7 @@ struct TransformedReceipt {
     transaction_hash: String,
     transaction_index: u64,
     tx_type: u64,
+    datetime: DateTime<Utc>,
 }
 
 #[allow(dead_code)]
@@ -139,6 +141,7 @@ struct TransformedTransaction {
     tx_type: u64,
     v: String,
     value: u64,
+    datetime: DateTime<Utc>,
 }
 
 #[allow(dead_code)]
@@ -160,7 +163,7 @@ struct TransformedBlock {
     sha3_uncles: String,
     size: u64,
     state_root: String,
-    timestamp: u64,
+    datetime: DateTime<Utc>,
     total_difficulty: u64,
     transaction_hashes: Vec<String>,
     transactions_root: String,
@@ -324,6 +327,8 @@ async fn main() -> Result<()> {
     log::info!("Converting hex values to appropriate types...");
     
     let transformed_blocks: Vec<TransformedBlock> = all_blocks.iter().map(|block| {
+        let ts = hex_to_u64(&block.timestamp);
+        let datetime = Utc.timestamp_opt(ts as i64, 0).single().unwrap_or_default();
         TransformedBlock {
             base_fee_per_gas: block.base_fee_per_gas.as_ref().map(|x| hex_to_u64(x)),
             difficulty: hex_to_u64(&block.difficulty),
@@ -341,7 +346,7 @@ async fn main() -> Result<()> {
             sha3_uncles: block.sha3_uncles.clone(),
             size: hex_to_u64(&block.size),
             state_root: block.state_root.clone(),
-            timestamp: hex_to_u64(&block.timestamp),
+            datetime,
             total_difficulty: hex_to_u64(&block.total_difficulty),
             transaction_hashes: block.transaction_hashes.clone(),
             transactions_root: block.transactions_root.clone(),
@@ -350,6 +355,12 @@ async fn main() -> Result<()> {
     }).collect();
 
     let transformed_transactions: Vec<TransformedTransaction> = all_transactions.iter().map(|tx| {
+        let block_number = hex_to_u64(&tx.block_number);
+        let block = transformed_blocks
+            .iter()
+            .find(|b| b.number == block_number)
+            .unwrap_or(&transformed_blocks[0]);
+        
         TransformedTransaction {
             block_hash: tx.block_hash.clone(),
             block_number: hex_to_u64(&tx.block_number),
@@ -367,11 +378,18 @@ async fn main() -> Result<()> {
             tx_type: hex_to_u64(&tx.tx_type),
             v: tx.v.clone(),
             value: hex_to_u64(&tx.value),
+            datetime: block.datetime,
         }
     }).collect();
 
     let transformed_receipts: Vec<Vec<TransformedReceipt>> = all_receipts.iter().map(|block_receipts| {
         block_receipts.iter().map(|receipt| {
+            let block_number = hex_to_u64(&receipt.block_number);
+            let block = transformed_blocks
+                .iter()
+                .find(|b| b.number == block_number)
+                .unwrap_or(&transformed_blocks[0]);
+
             TransformedReceipt {
                 block_hash: receipt.block_hash.clone(),
                 block_number: hex_to_u64(&receipt.block_number),
@@ -387,6 +405,7 @@ async fn main() -> Result<()> {
                 transaction_hash: receipt.transaction_hash.clone(),
                 transaction_index: hex_to_u64(&receipt.transaction_index),
                 tx_type: hex_to_u64(&receipt.tx_type),
+                datetime: block.datetime,
             }
         }).collect()
     }).collect();
