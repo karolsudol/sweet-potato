@@ -128,13 +128,13 @@ LIMIT 5;
 You can run these queries using curl:
 ```bash
 # Query blocks
-curl 'http://localhost:8123/?query=SELECT number,hash,datetime,gas_used FROM sweet_potatoe_dbt.raw_blocks ORDER BY number DESC LIMIT 5 FORMAT Pretty'
+curl "http://localhost:8123/?query=SELECT%20number,hash,datetime,gas_used%20FROM%20sweet_potatoe_dbt.raw_blocks%20ORDER%20BY%20number%20DESC%20LIMIT%205%20FORMAT%20Pretty"
 
 # Query transactions
-curl 'http://localhost:8123/?query=SELECT hash,block_number,datetime,`from`,`to`,value FROM sweet_potatoe_dbt.raw_transactions ORDER BY datetime DESC LIMIT 5 FORMAT Pretty'
+curl "http://localhost:8123/?query=SELECT%20hash,block_number,datetime,from,to,value%20FROM%20sweet_potatoe_dbt.raw_transactions%20ORDER%20BY%20datetime%20DESC%20LIMIT%205%20FORMAT%20Pretty"
 
 # Query receipts
-curl 'http://localhost:8123/?query=SELECT transaction_hash,block_number,datetime,status,gas_used FROM sweet_potatoe_dbt.raw_receipts ORDER BY datetime DESC LIMIT 5 FORMAT Pretty'
+curl "http://localhost:8123/?query=SELECT%20transaction_hash,block_number,datetime,status,gas_used%20FROM%20sweet_potatoe_dbt.raw_receipts%20ORDER%20BY%20datetime%20DESC%20LIMIT%205%20FORMAT%20Pretty"
 ```
 
 ### Troubleshooting
@@ -145,4 +145,21 @@ curl 'http://localhost:8123/?query=SELECT transaction_hash,block_number,datetime
 DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_blocks;
 DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_transactions;
 DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_receipts;
+```
+
+### Quick Query Scripts
+You can use the provided bash scripts to quickly query the data:
+
+```bash
+# Make scripts executable
+chmod +x query_blocks.sh query_transactions.sh query_receipts.sh
+
+# Query blocks
+./query_blocks.sh
+
+# Query transactions
+./query_transactions.sh
+
+# Query receipts
+./query_receipts.sh
 ```
