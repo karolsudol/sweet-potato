@@ -152,14 +152,14 @@ You can use the provided bash scripts to quickly query the data:
 
 ```bash
 # Make scripts executable
-chmod +x query_blocks.sh query_transactions.sh query_receipts.sh
+chmod +x db/sql_queries/query_blocks.sh db/sql_queries/query_transactions.sh db/sql_queries/query_receipts.sh
 
 # Query blocks
-./query_blocks.sh
+./db/sql_queries/query_blocks.sh
 
 # Query transactions
-./query_transactions.sh
+./db/sql_queries/query_transactions.sh
 
 # Query receipts
-./query_receipts.sh
+./db/sql_queries/query_receipts.sh
 ```
