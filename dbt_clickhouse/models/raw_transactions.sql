@@ -6,7 +6,7 @@
 ) }}
 
 with source as (
-    select * from file('indexer/raw_data/transactions/*.json', 'JSONEachRow',
+    select * from file('../indexer/raw_data/transactions/*.json', 'JSONEachRow',
     'block_hash String,
      block_number UInt64,
      chain_id UInt64,
