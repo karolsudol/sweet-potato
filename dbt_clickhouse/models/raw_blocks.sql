@@ -30,4 +30,14 @@ with source as (
      uncles Array(String)')
 )
 
-select * from source 
+-- Debug information
+{{ log("Starting raw_blocks model", info=True) }}
+{{ log("Source query file count: " ~ run_query("SELECT count(*) FROM source").columns[0].values()[0], info=True) }}
+
+select 
+    *,
+    '{{ invocation_id }}' as _invocation_id
+from source
+{% if is_incremental() %}
+where datetime > (select max(datetime) from {{ this }})
+{% endif %} 
