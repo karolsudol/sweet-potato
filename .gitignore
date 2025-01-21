@@ -2,4 +2,4 @@ db/user_files/*
 .env
 indexer/target/*
 indexer/raw_data/*
-.venv/
+.venv
