@@ -5,6 +5,9 @@
     unique_key='hash'
 ) }}
 
+-- Debug information
+{{ log("Starting raw_blocks model", info=True) }}
+
 with source as (
     select * from file('../indexer/raw_data/blocks/*.json', 'JSONEachRow', 
     'base_fee_per_gas Nullable(UInt64),
@@ -29,10 +32,6 @@ with source as (
      transactions_root String,
      uncles Array(String)')
 )
-
--- Debug information
-{{ log("Starting raw_blocks model", info=True) }}
-{{ log("Source query file count: " ~ run_query("SELECT count(*) FROM source").columns[0].values()[0], info=True) }}
 
 select 
     *,

@@ -5,6 +5,9 @@
     unique_key='hash'
 ) }}
 
+-- Debug information
+{{ log("Starting raw_transactions model", info=True) }}
+
 with source as (
     select * from file('../indexer/raw_data/transactions/*.json', 'JSONEachRow',
     'block_hash String,
@@ -25,10 +28,6 @@ with source as (
      value UInt64,
      datetime DateTime')
 )
-
--- Debug information
-{{ log("Starting raw_transactions model", info=True) }}
-{{ log("Source query file count: " ~ run_query("SELECT count(*) FROM source").columns[0].values()[0], info=True) }}
 
 select 
     *,

@@ -83,6 +83,9 @@ dbt run
 
 # Test the data
 dbt test
+
+# Run the models with full refresh and debug logs
+dbt run --full-refresh --debug
 ```
 
 ### Query Data in ClickHouse
