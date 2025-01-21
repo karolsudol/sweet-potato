@@ -23,6 +23,4 @@ clean-targets:
 models:
   blockchain_etl:
     +materialized: table
-    raw:
-      +schema: raw
-      +tags: ['raw']
+    +schema: sweet_potatoe_dbt

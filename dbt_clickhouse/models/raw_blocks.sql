@@ -9,7 +9,7 @@
 {{ log("Starting raw_blocks model", info=True) }}
 
 with source as (
-    select * from file('../indexer/raw_data/blocks/*.json', 'JSONEachRow', 
+    select * from file('../indexer/raw_data/blocks/*.json', 'JSONEachRow',
     'base_fee_per_gas Nullable(UInt64),
      difficulty UInt64,
      extra_data String,
