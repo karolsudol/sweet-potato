@@ -47,3 +47,14 @@ cd indexer && START=1000 COUNT=10 PRINT_OUTPUT=true cargo run
 # Use custom database URL
 cd indexer && CLICKHOUSE_URL="http://custom-host:8123" cargo run
 ```
+
+### Create a Virtual Environment
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### Install Dependencies
+```bash
+pip install -r requirements.txt
+```
