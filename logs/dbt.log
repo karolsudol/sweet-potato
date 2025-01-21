@@ -28,3 +28,33 @@ Happy modeling!
 [0m14:47:11.099671 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fe74903ee10>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fe74ca132d0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fe74934a6d0>]}
 [0m14:47:11.100756 [debug] [MainThread]: Flushing usage events
 [0m14:47:11.809156 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m15:39:07.394226 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f430151fe90>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f4301511b10>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f4301511b90>]}
+
+
+============================== 15:39:07.399951 | 7d85510e-4c11-4bc5-89bf-0e54ef23d051 ==============================
+[0m15:39:07.399951 [info ] [MainThread]: Running with dbt=1.8.9
+[0m15:39:07.406885 [debug] [MainThread]: running dbt with arguments {'printer_width': '80', 'indirect_selection': 'eager', 'write_json': 'True', 'log_cache_events': 'False', 'partial_parse': 'True', 'cache_selected_only': 'False', 'warn_error': 'None', 'version_check': 'True', 'profiles_dir': '/home/koko/.dbt', 'log_path': 'logs', 'debug': 'False', 'fail_fast': 'False', 'use_colors': 'True', 'use_experimental_parser': 'False', 'empty': 'None', 'quiet': 'False', 'no_print': 'None', 'warn_error_options': 'WarnErrorOptions(include=[], exclude=[])', 'invocation_command': 'dbt init dbt_clickhouse', 'static_parser': 'True', 'introspect': 'True', 'target_path': 'None', 'log_format': 'default', 'send_anonymous_usage_stats': 'True'}
+[0m15:39:07.435102 [debug] [MainThread]: Starter project path: /home/koko/dev/karolsudol/sweet-potato/.venv/lib/python3.11/site-packages/dbt/include/starter_project
+[0m15:39:07.441433 [info ] [MainThread]: 
+Your new dbt project "dbt_clickhouse" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m15:39:07.442119 [info ] [MainThread]: Setting up your profile.
+[0m15:39:11.287326 [info ] [MainThread]: No sample profile found for clickhouse.
+[0m15:39:11.306158 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 3.9856746, "process_in_blocks": "0", "process_kernel_time": 0.254794, "process_mem_max_rss": "90436", "process_out_blocks": "0", "process_user_time": 1.715522}
+[0m15:39:11.307003 [debug] [MainThread]: Command `dbt init` succeeded at 15:39:11.306853 after 3.99 seconds
+[0m15:39:11.307574 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f43050bb190>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f4301a81490>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f43019ee6d0>]}
+[0m15:39:11.308159 [debug] [MainThread]: Flushing usage events
+[0m15:39:12.133878 [debug] [MainThread]: An error was encountered while trying to flush usage events
