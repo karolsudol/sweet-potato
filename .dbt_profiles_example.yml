@@ -1,0 +1,11 @@
+dbt_clickhouse:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      schema: sweet_potatoe_dbt
+      host: localhost
+      port: 8123
+      user: default
+      password: 'password'
+      secure: False

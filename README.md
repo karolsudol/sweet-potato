@@ -58,3 +58,91 @@ source .venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+
+## DBT Setup and Operations
+
+### Install DBT Dependencies
+```bash
+# Make sure you're in the virtual environment
+source .venv/bin/activate
+
+# Install dbt-clickhouse
+pip install dbt-clickhouse
+```
+
+### Run DBT
+```bash
+# Navigate to dbt project directory
+cd dbt_clickhouse
+
+# Test the connection
+dbt debug
+
+# Run the models
+dbt run
+
+# Test the data
+dbt test
+```
+
+### Query Data in ClickHouse
+
+You can check the loaded data using these ClickHouse queries:
+
+```sql
+-- View recent blocks
+SELECT 
+    number,
+    hash,
+    datetime,
+    gas_used,
+    transaction_hashes
+FROM sweet_potatoe_dbt.raw_blocks
+ORDER BY number DESC
+LIMIT 5;
+
+-- View recent transactions
+SELECT 
+    hash,
+    block_number,
+    datetime,
+    `from`,
+    `to`,
+    value
+FROM sweet_potatoe_dbt.raw_transactions
+ORDER BY datetime DESC
+LIMIT 5;
+
+-- View recent receipts
+SELECT 
+    transaction_hash,
+    block_number,
+    datetime,
+    status,
+    gas_used
+FROM sweet_potatoe_dbt.raw_receipts
+ORDER BY datetime DESC
+LIMIT 5;
+```
+
+You can run these queries using curl:
+```bash
+# Query blocks
+curl 'http://localhost:8123/?query=SELECT number,hash,datetime,gas_used FROM sweet_potatoe_dbt.raw_blocks ORDER BY number DESC LIMIT 5 FORMAT Pretty'
+
+# Query transactions
+curl 'http://localhost:8123/?query=SELECT hash,block_number,datetime,`from`,`to`,value FROM sweet_potatoe_dbt.raw_transactions ORDER BY datetime DESC LIMIT 5 FORMAT Pretty'
+
+# Query receipts
+curl 'http://localhost:8123/?query=SELECT transaction_hash,block_number,datetime,status,gas_used FROM sweet_potatoe_dbt.raw_receipts ORDER BY datetime DESC LIMIT 5 FORMAT Pretty'
+```
+
+### Troubleshooting
+- If dbt can't find the JSON files, verify the paths in the model SQL files
+- If you get permission errors, ensure ClickHouse has access to the raw data directory
+- If you need to reset the tables, you can run:
+```sql
+DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_blocks;
+DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_transactions;
+DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_receipts;
+```
