@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: raw_blocks
+    description: Raw blockchain blocks data
+    columns:
+      - name: base_fee_per_gas
+        description: Base fee per gas in wei
+        tests:
+          - not_null
+      - name: number
+        description: Block number
+        tests:
+          - unique
+          - not_null
+      - name: hash
+        description: Block hash
+        tests:
+          - unique
+          - not_null
+      - name: datetime
+        description: Block timestamp
+        tests:
+          - not_null
+
+  - name: raw_transactions
+    description: Raw blockchain transactions data
+    columns:
+      - name: hash
+        description: Transaction hash
+        tests:
+          - unique
+          - not_null
+      - name: block_number
+        description: Block number
+        tests:
+          - not_null
+      - name: datetime
+        description: Transaction timestamp
+        tests:
+          - not_null
+
+  - name: raw_receipts
+    description: Raw blockchain transaction receipts data
+    columns:
+      - name: transaction_hash
+        description: Transaction hash
+        tests:
+          - unique
+          - not_null
+      - name: block_number
+        description: Block number
+        tests:
+          - not_null
+      - name: datetime
+        description: Receipt timestamp
+        tests:
+          - not_null 
