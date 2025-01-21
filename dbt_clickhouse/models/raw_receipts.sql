@@ -5,6 +5,9 @@
     unique_key='transaction_hash'
 ) }}
 
+-- Debug information
+{{ log("Starting raw_receipts model", info=True) }}
+
 with source as (
     select * from file('../indexer/raw_data/receipts/*.json', 'JSONEachRow',
     'block_hash String,
@@ -24,4 +27,10 @@ with source as (
      datetime DateTime')
 )
 
-select * from source 
+select 
+    *,
+    '{{ invocation_id }}' as _invocation_id
+from source
+{% if is_incremental() %}
+where datetime > (select max(datetime) from {{ this }})
+{% endif %} 
