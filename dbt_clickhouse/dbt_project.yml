@@ -1,0 +1,28 @@
+name: 'blockchain_etl'
+version: '1.0.0'
+config-version: 2
+
+profile: 'dbt_clickhouse'
+
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:     
+  - "target"
+  - "dbt_packages"
+
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+models:
+  blockchain_etl:
+    +materialized: table
+    raw:
+      +schema: raw
+      +tags: ['raw']
