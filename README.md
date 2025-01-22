@@ -104,12 +104,3 @@ chmod +x db/sql_queries/query_blocks.sh db/sql_queries/query_transactions.sh db/
 # Query receipts
 ./db/sql_queries/query_receipts.sh
 
-### Troubleshooting
-- If dbt can't find the JSON files, verify the paths in the model SQL files
-- If you get permission errors, ensure ClickHouse has access to the raw data directory
-- If you need to reset the tables, you can run:
-```sql
-DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_blocks;
-DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_transactions;
-DROP TABLE IF EXISTS sweet_potatoe_dbt.raw_receipts;
-```
