@@ -3,3 +3,6 @@ db/user_files/*
 indexer/target/*
 indexer/raw_data/*
 .venv
+uv.lock
+.python-version
+
