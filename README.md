@@ -51,27 +51,16 @@ cd indexer && RUST_LOG=debug START=100 COUNT=1 cargo run
 cd indexer && CLICKHOUSE_URL="http://custom-host:8123" cargo run
 ```
 
-### Create a Virtual Environment
+### Create a Virtual Environment and install dependencies
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+uv sync 
+uv 
+.venv/bin/activate
 ```
 
-### Install Dependencies
-```bash
-pip install -r requirements.txt
-```
 
 ## DBT Setup and Operations
 
-### Install DBT Dependencies
-```bash
-# Make sure you're in the virtual environment
-source .venv/bin/activate
-
-# Install dbt-clickhouse
-pip install dbt-clickhouse
-```
 
 ### Run DBT
 ```bash
