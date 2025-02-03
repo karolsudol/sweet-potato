@@ -1,0 +1,10 @@
+[project]
+name = "sweet-potato"
+version = "0.1.0"
+description = "Node indexing pipeline EVM"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "dbt-clickhouse>=1.1.8",
+    "dbt-core>=1.9.2",
+]

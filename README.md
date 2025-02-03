@@ -1,6 +1,9 @@
 # sweet-potato
 Node Indexing Pipeline - EVM
 
+![Sweet Potato Pipeline](img/sweet-potato.gif)
+
+
 ## Database Operations
 
 ### Start the Database
@@ -41,34 +44,23 @@ cd indexer && START=1000 COUNT=100 cargo run
 # Process blocks with logs
 cd indexer && RUST_LOG=info START=100 COUNT=10 cargo run
 
-# Process blocks with detailed output of the porocessed data 
+# Process blocks with detailed output of the porocessed data
 cd indexer && RUST_LOG=debug START=100 COUNT=1 cargo run
 
 # Use custom database URL
 cd indexer && CLICKHOUSE_URL="http://custom-host:8123" cargo run
 ```
 
-### Create a Virtual Environment
+### Create a Virtual Environment and install dependencies
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+uv sync 
+uv 
+.venv/bin/activate
 ```
 
-### Install Dependencies
-```bash
-pip install -r requirements.txt
-```
 
 ## DBT Setup and Operations
 
-### Install DBT Dependencies
-```bash
-# Make sure you're in the virtual environment
-source .venv/bin/activate
-
-# Install dbt-clickhouse
-pip install dbt-clickhouse
-```
 
 ### Run DBT
 ```bash
@@ -103,4 +95,6 @@ chmod +x db/sql_queries/query_blocks.sh db/sql_queries/query_transactions.sh db/
 
 # Query receipts
 ./db/sql_queries/query_receipts.sh
+
+
 
