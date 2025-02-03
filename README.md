@@ -1,6 +1,9 @@
 # sweet-potato
 Node Indexing Pipeline - EVM
 
+![Sweet Potato Pipeline](img/sweet-potato.gif)
+
+
 ## Database Operations
 
 ### Start the Database
@@ -41,7 +44,7 @@ cd indexer && START=1000 COUNT=100 cargo run
 # Process blocks with logs
 cd indexer && RUST_LOG=info START=100 COUNT=10 cargo run
 
-# Process blocks with detailed output of the porocessed data 
+# Process blocks with detailed output of the porocessed data
 cd indexer && RUST_LOG=debug START=100 COUNT=1 cargo run
 
 # Use custom database URL
@@ -103,4 +106,6 @@ chmod +x db/sql_queries/query_blocks.sh db/sql_queries/query_transactions.sh db/
 
 # Query receipts
 ./db/sql_queries/query_receipts.sh
+
+
 
