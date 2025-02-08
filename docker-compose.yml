@@ -11,4 +11,19 @@ services:
     environment:
       - CLICKHOUSE_USER=${CLICKHOUSE_USER}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
-      - CLICKHOUSE_DB=${CLICKHOUSE_DB} 
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
+
+  dbt:
+    build:
+      context: .
+      dockerfile: dbt.Dockerfile
+    volumes:
+      - ./dbt:/dbt
+    depends_on:
+      - clickhouse
+    environment:
+      - DBT_CLICKHOUSE_SERVER=clickhouse
+      - DBT_CLICKHOUSE_PORT=8123
+      - DBT_CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - DBT_CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - DBT_CLICKHOUSE_DATABASE=${CLICKHOUSE_DB} 
