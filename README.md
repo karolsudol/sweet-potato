@@ -3,14 +3,12 @@ Node Indexing Pipeline - EVM
 
 ![Sweet Potato Pipeline](img/sweet-potato.gif)
 
-
-This is an example of a node indexing pipeline for an EVM chain.
-Rust service extracts data from an EVM node and saves it to a ClickHouse database.
-DBT is used to transform the data and load it into a data warehouse.
+Rust service extracts data from an EVM node, types the structs and streams it to a ClickHouse database.
+DBT is used to transform the data and load it into data warehouse tables: traces, blocks, transactions, receipts, etc.
 
 ### Start the Database
 ```bash
-docker compose up -d
+docker-compose up -d --build
 ```
 
 ## Run Indexer
@@ -83,6 +81,38 @@ docker compose down -v
 
 # Clean up data directory
 rm -rf ./db/user_files/*
+```
+
+docker-compose exec dbt dbt init
+
+# To test your connection
+```bash
+docker-compose exec dbt dbt debug
+```
+
+# To run your models
+```bash
+docker-compose exec dbt dbt run
+```
+
+# To generate documentation
+```bash
+docker-compose exec dbt dbt docs generate
+```
+
+# To test your models
+```bash
+docker-compose exec dbt dbt test
+```
+
+# To tear down the database
+```bash
+docker-compose down
+```
+
+# To view the logs
+```bash
+docker-compose logs -f
 ```
 
 
